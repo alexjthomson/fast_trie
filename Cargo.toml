@@ -13,6 +13,12 @@ license = "MIT"
 keywords = ["string-matching", "efficient", "library"]
 categories = ["text-processing", "algorithms", "data-structures"]
 
+[dependencies]
+serde = { version = "1", optional = true }
+
+[dev-dependencies]
+serde_json = { version = "1" }
+
 [features]
-default = [ "str" ]
-str = []
+default = [ "string" ]
+string = []

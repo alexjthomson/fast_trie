@@ -1,6 +1,9 @@
-use std::hash::{BuildHasher, Hasher};
+use std::hash::{
+    BuildHasher,
+    Hasher,
+};
 
-/// An efficient character hasher.
+/// A [`Hasher`] optimised for hashing [`char`]s using non-cryptographic hashes.
 #[derive(Default)]
 pub struct CharHasher(u64);
 

@@ -1,14 +1,23 @@
+pub mod hash;
+
 use hash::CharHasher;
 
-use crate::{node::TrieNode, trie::Trie};
+use crate::{
+    node::TrieNode,
+    trie::Trie,
+};
 
-pub mod hash;
+#[cfg(feature = "serde")]
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 /// A string trie wrapper.
 #[derive(Default)]
-pub struct StrTrie(Trie<char, CharHasher>);
+pub struct StringTrie(Trie<char, CharHasher>);
 
-impl StrTrie {
+impl StringTrie {
     /// Returns a new empty string trie.
     pub fn new() -> Self {
         Default::default()
@@ -51,13 +60,13 @@ impl StrTrie {
 
     /// Returns `true` if the trie contains the string, otherwise returns
     /// `false`.
-    pub fn contains(&mut self, value: &str) -> bool {
+    pub fn contains(&self, value: &str) -> bool {
         self.0.contains(value.chars())
     }
 
     /// Returns `true` if the trie contains the string, otherwise returns
     /// `false`.
-    pub fn contains_iter(&mut self, iter: impl Iterator<Item = char>) -> bool {
+    pub fn contains_iter(&self, iter: impl Iterator<Item = char>) -> bool {
         self.0.contains(iter)
     }
 
@@ -67,20 +76,41 @@ impl StrTrie {
     }
 }
 
+#[cfg(feature = "serde")]
+impl Serialize for StringTrie {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for StringTrie {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let trie = Trie::<char, CharHasher>::deserialize(deserializer)?;
+        Ok(StringTrie(trie))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_empty() {
-        let trie = StrTrie::new();
+        let trie = StringTrie::new();
         assert!(trie.is_empty());
         assert_eq!(trie.len(), 0);
     }
 
     #[test]
     fn test_insertion() {
-        let mut trie = StrTrie::new();
+        let mut trie = StringTrie::new();
         assert!(trie.insert("test"));
 
         assert!(trie.contains("test"));
@@ -99,7 +129,7 @@ mod tests {
 
     #[test]
     fn test_len() {
-        let mut trie = StrTrie::new();
+        let mut trie = StringTrie::new();
         assert_eq!(trie.len(), 0);
         
         // Test insertions:
@@ -137,7 +167,7 @@ mod tests {
 
     #[test]
     fn test_deletion() {
-        let mut trie = StrTrie::new();
+        let mut trie = StringTrie::new();
         assert!(trie.insert("test"));
         assert!(trie.insert("testing"));
         assert!(trie.insert("tester"));
@@ -179,7 +209,7 @@ mod tests {
 
     #[test]
     fn test_insertion_and_deletion() {
-        let mut trie = StrTrie::new();
+        let mut trie = StringTrie::new();
         assert!(trie.insert("test"));
         assert!(trie.insert("testing"));
         assert!(trie.insert("tester"));
@@ -203,5 +233,40 @@ mod tests {
         assert!(trie.contains("test"));
         assert!(!trie.contains("testing"));
         assert!(trie.contains("tester"));
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_serialize_deserialize() {
+        use serde_json;
+
+        // Create a StringTrie and insert some values
+        let mut trie = StringTrie::new();
+        assert!(trie.insert("hello"));
+        assert!(trie.insert("world"));
+        assert!(trie.insert("trie"));
+        assert!(trie.insert("serialize"));
+        assert!(trie.insert("deserialize"));
+
+        // Serialize the trie to a JSON string
+        let serialized = serde_json::to_string(&trie).unwrap();
+        println!("Serialized StringTrie: {}", serialized);
+
+        // Deserialize the JSON string back into a StringTrie
+        let deserialized: StringTrie = serde_json::from_str(&serialized).unwrap();
+
+        // Verify that the deserialized trie contains the same data
+        assert!(deserialized.contains("hello"));
+        assert!(deserialized.contains("world"));
+        assert!(deserialized.contains("trie"));
+        assert!(deserialized.contains("serialize"));
+        assert!(deserialized.contains("deserialize"));
+
+        // Ensure deserialized trie has the correct length
+        assert_eq!(deserialized.len(), 5);
+
+        // Ensure it does not contain non-existent words
+        assert!(!deserialized.contains("missing"));
+        assert!(!deserialized.contains("data"));
     }
 }

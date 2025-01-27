@@ -1,8 +1,8 @@
 pub mod trie;
 pub mod node;
 
-#[cfg(feature = "str")]
-pub mod str;
+#[cfg(feature = "string")]
+pub mod string;
 
 #[allow(missing_docs)]
 pub mod prelude {
@@ -11,4 +11,8 @@ pub mod prelude {
         trie::Trie,
         node::TrieNode,
     };
+
+    #[doc(hidden)]
+    #[cfg(feature = "string")]
+    pub use crate::string::StringTrie;
 }

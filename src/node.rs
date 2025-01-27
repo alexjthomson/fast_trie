@@ -1,4 +1,18 @@
-use std::{borrow::Borrow, collections::HashMap, hash::{BuildHasher, Hash}};
+use std::{
+    borrow::Borrow,
+    collections::HashMap,
+    hash::{
+        BuildHasher,
+        Hash,
+    },
+};
+
+#[cfg(feature = "serde")]
+use serde::{
+    Deserialize,
+    Serialize,
+    ser::SerializeStruct,
+};
 
 /// A node within a trie.
 #[derive(Default)]
@@ -132,5 +146,107 @@ where
     /// `false`.
     pub fn is_end_of_word(&self) -> bool {
         self.end_of_value
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, T, H> Deserialize<'de> for TrieNode<T, H>
+where
+    T: std::hash::Hash + Eq + Deserialize<'de>,
+    H: std::hash::BuildHasher + Default,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        // TrieNode visitor used for deserialization.
+        struct TrieNodeVisitor<T, H> {
+            marker: std::marker::PhantomData<(T, H)>,
+        }
+
+        impl<'de, T, H> serde::de::Visitor<'de> for TrieNodeVisitor<T, H>
+        where
+            T: std::hash::Hash + Eq + Deserialize<'de>,
+            H: std::hash::BuildHasher + Default,
+        {
+            type Value = TrieNode<T, H>;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("struct TrieNode")
+            }
+
+            fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
+            where
+                M: serde::de::MapAccess<'de>,
+            {
+                let mut children = None;
+                let mut end_of_value = None;
+
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        "children" => {
+                            if children.is_some() {
+                                return Err(serde::de::Error::duplicate_field("children"));
+                            }
+                            children = Some(map.next_value()?);
+                        }
+                        "end_of_value" => {
+                            if end_of_value.is_some() {
+                                return Err(serde::de::Error::duplicate_field("end_of_value"));
+                            }
+                            end_of_value = Some(map.next_value()?);
+                        }
+                        _ => {
+                            return Err(serde::de::Error::unknown_field(
+                                key,
+                                &["children", "end_of_value"],
+                            ));
+                        }
+                    }
+                }
+
+                let children = children.unwrap_or_default();
+                let end_of_value = end_of_value.unwrap_or_default();
+
+                Ok(TrieNode {
+                    children,
+                    end_of_value,
+                })
+            }
+        }
+
+        deserializer.deserialize_struct(
+            "TrieNode",
+            &["children", "end_of_value"],
+            TrieNodeVisitor {
+                marker: std::marker::PhantomData,
+            },
+        )
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<T, H> Serialize for TrieNode<T, H>
+where
+    T: std::hash::Hash + Eq + Serialize,
+    H: std::hash::BuildHasher,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct(
+            "TrieNode",
+            2,
+        )?;
+        state.serialize_field(
+            "children",
+            &self.children,
+        )?;
+        state.serialize_field(
+            "end_of_value",
+            &self.end_of_value,
+        )?;
+        state.end()
     }
 }

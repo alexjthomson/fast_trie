@@ -1,4 +1,14 @@
-use std::hash::{BuildHasher, Hash};
+use std::hash::{
+    BuildHasher,
+    Hash,
+};
+
+#[cfg(feature = "serde")]
+use serde::{
+    Deserialize,
+    Serialize,
+    ser::SerializeStruct,
+};
 
 use crate::node::TrieNode;
 
@@ -135,4 +145,90 @@ where
     }
 }
 
-// TODO: Add unit tests
+#[cfg(feature = "serde")]
+impl<T, H> Serialize for Trie<T, H>
+where
+    T: Hash + Eq + Serialize,
+    H: BuildHasher + Default,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        // Serialize as a struct with two fields: `root` and `count`
+        let mut state = serializer.serialize_struct("Trie", 2)?;
+        state.serialize_field("root", &self.root)?;
+        state.serialize_field("count", &self.count)?;
+        state.end()
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, T, H> Deserialize<'de> for Trie<T, H>
+where
+    T: Hash + Eq + Deserialize<'de>,
+    H: BuildHasher + Default,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        // Visitor for deserializing a `Trie`.
+        struct TrieVisitor<T, H> {
+            marker: std::marker::PhantomData<(T, H)>,
+        }
+
+        impl<'de, T, H> serde::de::Visitor<'de> for TrieVisitor<T, H>
+        where
+            T: Hash + Eq + Deserialize<'de>,
+            H: BuildHasher + Default,
+        {
+            type Value = Trie<T, H>;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a Trie with root and count fields")
+            }
+
+            fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
+            where
+                M: serde::de::MapAccess<'de>,
+            {
+                let mut root = None;
+                let mut count = None;
+
+                while let Some(key) = map.next_key::<&str>()? {
+                    match key {
+                        "root" => {
+                            if root.is_some() {
+                                return Err(serde::de::Error::duplicate_field("root"));
+                            }
+                            root = Some(map.next_value()?);
+                        }
+                        "count" => {
+                            if count.is_some() {
+                                return Err(serde::de::Error::duplicate_field("count"));
+                            }
+                            count = Some(map.next_value()?);
+                        }
+                        _ => {
+                            return Err(serde::de::Error::unknown_field(key, &["root", "count"]));
+                        }
+                    }
+                }
+
+                let root = root.ok_or_else(|| serde::de::Error::missing_field("root"))?;
+                let count = count.ok_or_else(|| serde::de::Error::missing_field("count"))?;
+
+                Ok(Trie { root, count })
+            }
+        }
+
+        deserializer.deserialize_struct(
+            "Trie",
+            &["root", "count"],
+            TrieVisitor {
+                marker: std::marker::PhantomData,
+            },
+        )
+    }
+}
