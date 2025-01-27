@@ -10,7 +10,7 @@ documentation = "https://docs.rs/fast_trie"
 homepage = "https://github.com/alexjthomson/fast_trie"
 license = "MIT"
 
-keywords = ["string-matching", "efficient", "library"]
+keywords = ["trie", "string", "fast", "string-matching", "efficient", "library", "serde"]
 categories = ["text-processing", "algorithms", "data-structures"]
 
 [dependencies]
