@@ -2,49 +2,47 @@ use crate::node::TrieNode;
 
 /// Iterates over a [`TrieNode`].
 pub struct TrieIter<'a, T, H> {
-    stack: Vec<(&'a TrieNode<T, H>, usize)>,
-    buffer: Vec<&'a T>,
+    stack: Vec<(T, &'a TrieNode<T, H>, usize)>,
+    buffer: Vec<T>,
 }
 
-impl<'a, T, H> TrieIter<'a, T, H> {
+impl<'a, T, H> TrieIter<'a, T, H>
+where
+    T: Copy,
+{
     /// Creates a new [`TrieIter`] over a root [`TrieNode`].
     pub fn new(root: &'a TrieNode<T, H>) -> Self {
+        let mut stack = Vec::with_capacity(
+            root.children.len()
+        );
+        for (key, child) in &root.children {
+            stack.push((*key, child, 0));
+        }
         Self {
-            stack: vec![(root, 0)],
+            stack,
             buffer: Vec::new(),
         }
     }
 }
 
-impl<'a, T, H> Iterator for TrieIter<'a, T, H>
+impl<T, H> Iterator for TrieIter<'_, T, H>
 where
-    T: Eq,
+    T: Eq + Copy,
 {
-    type Item = &'a [T];
+    type Item = Vec<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some((node, depth)) = self.stack.pop() {
+        while let Some((key, node, depth)) = self.stack.pop() {
             // If we're backtracking, truncate the prefix to the current depth:
             self.buffer.truncate(depth);
+            self.buffer.push(key);
 
-            // Push the current node's children onto the stack:
+            if node.end_of_value {
+                return Some(self.buffer.clone());
+            }
+
             for (key, child) in &node.children {
-                self.stack.push((child, depth + 1));
-                self.buffer.push(key);
-
-                // If the child node marks the end of a value, yield the current
-                // prefix:
-                if child.end_of_value {
-                    // SAFETY: The prefix references keys in the trie, which
-                    // have the same lifetime as the iterator.
-                    return Some(
-                        unsafe {
-                            std::mem::transmute::<&[&T], &[T]>(
-                                &self.buffer
-                            )
-                        }
-                    );
-                }
+                self.stack.push((*key, child, depth + 1));
             }
         }
         None

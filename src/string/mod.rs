@@ -2,6 +2,7 @@ pub mod hash;
 pub mod iter;
 
 use hash::CharHasher;
+use iter::StringTrieIter;
 
 use crate::{
     node::TrieNode,
@@ -74,6 +75,11 @@ impl StringTrie {
     /// Returns an immutable reference to the root [`TrieNode`].
     pub fn root(&self) -> &TrieNode<char, CharHasher> {
         self.0.root()
+    }
+
+    /// Returns an iterator every [`String`] in the trie.
+    pub fn iter(&self) -> impl Iterator<Item = String> + use<'_> {
+        StringTrieIter::new(self.0.root())
     }
 }
 
@@ -234,6 +240,25 @@ mod tests {
         assert!(trie.contains("test"));
         assert!(!trie.contains("testing"));
         assert!(trie.contains("tester"));
+    }
+
+    #[test]
+    fn test_iter() {
+        let mut values = std::collections::HashSet::new();
+        values.insert("test");
+        values.insert("testing");
+        values.insert("tester");
+        values.insert("other");
+        values.insert("hello world");
+
+        let mut trie = StringTrie::new();
+        for value in values.iter() {
+            assert!(trie.insert(value));
+        }
+
+        for value in trie.iter() {
+            assert!(values.remove(value.as_str()));
+        }
     }
 
     #[cfg(feature = "serde")]

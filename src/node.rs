@@ -4,6 +4,7 @@ use std::{
     hash::{
         BuildHasher,
         Hash,
+        RandomState,
     },
 };
 
@@ -18,7 +19,7 @@ use crate::iter::TrieIter;
 
 /// A node within a trie.
 #[derive(Default)]
-pub struct TrieNode<T, H> {
+pub struct TrieNode<T, H = RandomState> {
     /// Child nodes for each character.
     pub(super) children: HashMap<T, Self, H>,
     /// Tracks if the current character is the end of a word.
@@ -153,10 +154,10 @@ where
 
 impl<T, H> TrieNode<T, H>
 where
-    T: Eq,
+    T: Eq + Copy,
 {
     /// Returns an iterator over the [`Trie`].
-    pub fn iter(&self) -> impl Iterator<Item = &[T]> {
+    pub fn iter(&self) -> impl Iterator<Item = Vec<T>> + use<'_, T, H> {
         TrieIter::new(self)
     }
 }
