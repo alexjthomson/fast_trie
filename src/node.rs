@@ -157,7 +157,7 @@ where
     T: Eq + Copy,
 {
     /// Returns an iterator over the [`Trie`].
-    pub fn iter(&self) -> impl Iterator<Item = Vec<T>> + use<'_, T, H> {
+    pub fn iter(&self) -> TrieIter<'_, T, H> {
         TrieIter::new(self)
     }
 }

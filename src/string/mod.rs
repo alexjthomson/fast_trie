@@ -78,7 +78,7 @@ impl StringTrie {
     }
 
     /// Returns an iterator every [`String`] in the trie.
-    pub fn iter(&self) -> impl Iterator<Item = String> + use<'_> {
+    pub fn iter(&self) -> StringTrieIter<'_, CharHasher> {
         StringTrieIter::new(self.0.root())
     }
 }
