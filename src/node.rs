@@ -14,11 +14,13 @@ use serde::{
     ser::SerializeStruct,
 };
 
+use crate::iter::TrieIter;
+
 /// A node within a trie.
 #[derive(Default)]
 pub struct TrieNode<T, H> {
     /// Child nodes for each character.
-    children: HashMap<T, Self, H>,
+    pub(super) children: HashMap<T, Self, H>,
     /// Tracks if the current character is the end of a word.
     pub(super) end_of_value: bool,
 }
@@ -146,6 +148,16 @@ where
     /// `false`.
     pub fn is_end_of_word(&self) -> bool {
         self.end_of_value
+    }
+}
+
+impl<T, H> TrieNode<T, H>
+where
+    T: Eq,
+{
+    /// Returns an iterator over the [`Trie`].
+    pub fn iter(&self) -> impl Iterator<Item = &[T]> {
+        TrieIter::new(self)
     }
 }
 

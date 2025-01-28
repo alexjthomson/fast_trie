@@ -145,6 +145,16 @@ where
     }
 }
 
+impl<T, H> Trie<T, H>
+where
+    T: Eq,
+{
+    /// Returns an iterator over the [`Trie`].
+    pub fn iter(&self) -> impl Iterator<Item = &[T]> {
+        self.root.iter()
+    }
+}
+
 #[cfg(feature = "serde")]
 impl<T, H> Serialize for Trie<T, H>
 where
