@@ -1,12 +1,14 @@
 use crate::node::TrieNode;
 
-pub struct StringTrieIter<'a, H> {
-    stack: Vec<(char, &'a TrieNode<char, H>, usize)>,
+use super::hash::CharHasher;
+
+pub struct StringTrieIter<'a> {
+    stack: Vec<(char, &'a TrieNode<char, CharHasher>, usize)>,
     buffer: String,
 }
 
-impl<'a, H> StringTrieIter<'a, H> {
-    pub fn new(root: &'a TrieNode<char, H>) -> Self {
+impl<'a> StringTrieIter<'a> {
+    pub fn new(root: &'a TrieNode<char, CharHasher>) -> Self {
         let mut stack = Vec::with_capacity(
             root.children.len()
         );
@@ -20,7 +22,7 @@ impl<'a, H> StringTrieIter<'a, H> {
     }
 }
 
-impl<H> Iterator for StringTrieIter<'_, H> {
+impl Iterator for StringTrieIter<'_> {
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
